@@ -1,0 +1,52 @@
+{
+  "name": "xtyping",
+  "productName": "XTyping",
+  "version": "1.0.0",
+  "description": "XTyping: a free, offline typing tutor for Windows 10 and 11. Developed by Datix AI.",
+  "main": "main.js",
+  "author": "Datix AI (https://datixai.com)",
+  "homepage": "https://datixai.com",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "check": "node -e \"for (const f of ['main.js','preload.js',...require('fs').readdirSync('src/js').map(x=>'src/js/'+x)]) require('child_process').execFileSync(process.execPath,['--check',f],{stdio:'inherit'})\"",
+    "dist": "electron-builder --win nsis portable --x64"
+  },
+  "devDependencies": {
+    "electron": "^39.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.datixai.xtyping",
+    "productName": "XTyping",
+    "copyright": "Developed by Datix AI",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "artifactName": "XTyping-Setup-${version}.${ext}",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "XTyping",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "deleteAppDataOnUninstall": false
+    },
+    "portable": {
+      "artifactName": "XTyping-${version}-portable.${ext}"
+    }
+  }
+}
