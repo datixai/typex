@@ -1,4 +1,4 @@
-/* XTyping games: Meteor Words, Balloon Pop, Speed Sprint. */
+/* TypeX games: Meteor Words, Balloon Pop, Speed Sprint. */
 (function () {
   const { WORDS, PASSAGES, pick } = window.XTData;
 

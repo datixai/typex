@@ -1,4 +1,4 @@
-/* XTyping content: words, passages and the lesson path. All text is original. */
+/* TypeX content: words, passages and the lesson path. All text is original. */
 (function () {
   const WORDS = (
     'a as ask all add ads had has had lad sad dad fall fad lass glad flask salad hall ' +

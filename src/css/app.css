@@ -1,4 +1,4 @@
-/* XTyping styles. Developed by Datix AI. */
+/* TypeX styles. Developed by Datix AI. */
 @font-face { font-family: Inter; src: url(../assets/fonts/Inter_400Regular.ttf); font-weight: 400; }
 @font-face { font-family: Inter; src: url(../assets/fonts/Inter_600SemiBold.ttf); font-weight: 600; }
 @font-face { font-family: Inter; src: url(../assets/fonts/Inter_700Bold.ttf); font-weight: 700; }
@@ -385,3 +385,22 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 18px 0 6px; }
   .text { font-size: 25px; line-height: 44px; height: 132px; }
   .kb { --u: min(38px, calc((100vw - 640px) / var(--kw))); }
 }
+
+/* close / minimise on result popups */
+.modal { position: relative; }
+.m-tools { position: absolute; top: 12px; right: 12px; display: flex; gap: 4px; }
+.m-tools .icon-btn { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; }
+.m-tools .icon-btn:hover { background: var(--panel2); }
+.m-restore { position: fixed; right: 24px; bottom: 24px; z-index: 55; border: 0; border-radius: 30px; padding: 12px 20px; font-weight: 700; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 10px 30px rgba(99, 102, 241, .45); animation: rise .25s; }
+
+/* Beginner / Pro mode */
+.mode-pick { text-align: right; }
+.mode-pick .seg { margin: 0 0 6px; display: inline-flex; }
+.mode-pick .seg button { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; }
+.mode-pick .seg button .ic { width: 15px; height: 15px; }
+.mode-pick .seg button[data-m=pro].on { background: linear-gradient(135deg, #f59e0b, #ef4444); color: #fff; }
+.mode-pick small { display: block; font-size: 12px; }
+.pro-tag { position: absolute; left: 14px; top: -9px; font-size: 10px; font-weight: 800; letter-spacing: .1em; color: #fff; padding: 3px 8px; border-radius: 8px; background: linear-gradient(135deg, #f59e0b, #ef4444); }
+.pro-mode .lesson:hover { border-color: #f59e0b; }
+.tag.pro { --tc: #f59e0b; }
+.view-lesson.pro-mode .play-title small { color: #f59e0b; font-weight: 600; }

@@ -1,12 +1,13 @@
-# XTyping
+# TypeX
 
 **Free, offline typing tutor for Windows 10 and 11.** Developed by [Datix AI](https://datixai.com).
 
-XTyping helps anyone go from slow hunting and pecking to confident touch typing. It is completely free, needs no internet and keeps every profile private on the PC.
+TypeX helps anyone go from slow hunting and pecking to confident touch typing. It is completely free, needs no internet and keeps every profile private on the PC.
 
 ## Features
 
 - **49 guided lessons** in 4 tracks: Beginner (every letter, row by row), Intermediate (numbers, punctuation, sentences), Advanced (symbols, emails, code, paragraphs) and Number Pad (ten-key data entry).
+- **Beginner and Pro modes:** Beginner shows key hints and lets you fix mistakes. Pro hides hints, blocks Backspace, adds more text and needs higher accuracy and speed for 3 stars (Pro stars are kept separately).
 - **On-screen keyboard** with colour-coded fingers, the next key glowing, a hand and finger guide, and Shift hints.
 - **Switch keyboard layout any time:** Full-size with number pad, Tenkeyless, Laptop (compact), Laptop with number pad.
 - **Typing tests:** 30 seconds to 5 minutes, with stories, common words, code or your own text. Shows WPM, raw WPM, accuracy and keys to practise.
@@ -22,12 +23,14 @@ XTyping helps anyone go from slow hunting and pecking to confident touch typing.
 
 Download from the Releases page of this repository:
 
-- `XTyping-Setup-<version>.exe`: normal installer (choose folder, Start menu and desktop shortcuts, uninstaller).
-- `XTyping-<version>-portable.exe`: runs without installing, for example from a USB stick.
+- `TypeX-Setup-<version>.exe`: normal installer (choose folder, Start menu and desktop shortcuts, uninstaller).
+- `TypeX-<version>-portable.exe`: runs without installing, for example from a USB stick.
 
 Windows may show "Windows protected your PC" because the app is not code-signed. Click **More info**, then **Run anyway**.
 
-Profiles are stored per Windows account in `%APPDATA%\XTyping\profiles`.
+TypeX was called XTyping in version 1.0.0. Profiles made in XTyping are copied into TypeX automatically on first start. You can uninstall XTyping afterwards.
+
+Profiles are stored per Windows account in `%APPDATA%\TypeX\profiles`.
 
 ## Build (for developers)
 

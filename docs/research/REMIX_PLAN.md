@@ -1,6 +1,6 @@
-# Remix plan (typing.com ideas -> XTyping)
+# Remix plan (typing.com ideas -> TypeX)
 
-| Reference idea | XTyping version | Action |
+| Reference idea | TypeX version | Action |
 |---|---|---|
 | Web sign-in, cloud account | Local profiles on the PC, password + recovery code | Replace |
 | Student dashboard | Dashboard: greeting, WPM/accuracy/streak cards, daily goal ring, next lesson, WPM trend | Adapt |

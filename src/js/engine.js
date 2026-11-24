@@ -78,7 +78,7 @@
       const k = e.key;
       if (k === 'Backspace') {
         e.preventDefault();
-        if (this.o.stopOnError || this.pos === 0) return;
+        if (this.o.stopOnError || this.o.noBackspace || this.pos === 0) return;
         this.pos--; this.state[this.pos] = 0; this.paint(this.pos); this.paint(this.pos + 1);
         this.focusNext();
         return;

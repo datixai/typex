@@ -1,4 +1,4 @@
-/* XTyping app shell, screens and progress. Developed by Datix AI. */
+/* TypeX app shell, screens and progress. Developed by Datix AI. */
 (function () {
   const { TRACKS, buildLesson, testText } = window.XTData;
   const { Keyboard, LAYOUTS, handsSVG } = window.XTKeyboard;
@@ -52,13 +52,25 @@
     setTimeout(() => t.remove(), 3000);
   }
 
-  function modal(html, { onMount, dismiss = true, wide = false } = {}) {
+  // onX: when given, the popup gets a close (X) and a minimise button; X and Esc call onX.
+  function modal(html, { onMount, dismiss = true, wide = false, onX = null } = {}) {
     const root = $('#modal-root');
-    root.innerHTML = `<div class="overlay"><div class="modal ${wide ? 'wide' : ''}">${html}</div></div>`;
+    const tools = onX ? `<div class="m-tools"><button class="icon-btn" data-min title="Minimise (see the text behind)"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 12h12"/></svg></button><button class="icon-btn" data-x title="Close (Esc)"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>` : '';
+    root.innerHTML = `<div class="overlay"><div class="modal ${wide ? 'wide' : ''}">${tools}${html}</div></div>${onX ? '<button class="m-restore hide" data-restore>Show results</button>' : ''}`;
     const close = () => { root.innerHTML = ''; window.removeEventListener('keydown', escH, true); };
-    const escH = (e) => { if (e.key === 'Escape' && dismiss) { e.stopPropagation(); close(); } };
+    const xClose = () => { close(); onX(); };
+    const escH = (e) => {
+      if (e.key !== 'Escape') return;
+      if (onX) { e.preventDefault(); e.stopPropagation(); xClose(); } else if (dismiss) { e.stopPropagation(); close(); }
+    };
     window.addEventListener('keydown', escH, true);
     if (dismiss) $('.overlay', root).addEventListener('mousedown', (e) => { if (e.target.classList.contains('overlay')) close(); });
+    if (onX) {
+      const ov = $('.overlay', root); const rs = $('[data-restore]', root);
+      $('[data-x]', root).addEventListener('click', xClose);
+      $('[data-min]', root).addEventListener('click', () => { ov.classList.add('hide'); rs.classList.remove('hide'); });
+      rs.addEventListener('click', () => { ov.classList.remove('hide'); rs.classList.add('hide'); });
+    }
     onMount && onMount($('.modal', root), close);
     return close;
   }
@@ -74,15 +86,36 @@
   function ensure(data) {
     const d = data && typeof data === 'object' ? data : {};
     d.settings = { ...DEFAULT_SETTINGS, ...(d.settings || {}) };
-    d.lessons ||= {}; d.history ||= []; d.keyStats ||= {}; d.games ||= {}; d.daily ||= {}; d.badges ||= {}; d.tests ||= [];
-    d.xp ||= 0;
+    const obj = (x) => (x && typeof x === 'object' && !Array.isArray(x) ? x : {});
+    const arr = (x) => (Array.isArray(x) ? x.filter((i) => i && typeof i === 'object') : []);
+    d.lessons = obj(d.lessons); d.keyStats = obj(d.keyStats); d.games = obj(d.games); d.daily = obj(d.daily); d.badges = obj(d.badges);
+    d.history = arr(d.history); d.tests = arr(d.tests);
+    d.xp = Number.isFinite(d.xp) && d.xp > 0 ? d.xp : 0;
+    if (!['beginner', 'pro'].includes(d.settings.mode)) d.settings.mode = 'beginner';
     return d;
   }
 
   function save() {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => window.xt.save(D), 250);
+    saveTimer = setTimeout(() => {
+      window.xt.save(D).then((ok) => {
+        if (ok) { saveWarned = false; return; }
+        if (!saveWarned && D) { saveWarned = true; toast('Progress could not be saved. Check that the disk is not full.', 'bad'); }
+      }).catch(() => {});
+    }, 250);
   }
+  let saveWarned = false;
+
+  // Last line of defence: never leave the user stuck on an error.
+  let lastErr = 0;
+  function onAppError(err) {
+    console.error(err);
+    if (Date.now() - lastErr < 4000) return;
+    lastErr = Date.now();
+    try { toast('Something went wrong, but your progress is safe. Please try again.', 'bad'); } catch { /* ignore */ }
+  }
+  window.addEventListener('error', (e) => onAppError(e.error || e.message));
+  window.addEventListener('unhandledrejection', (e) => onAppError(e.reason));
 
   function applySettings() {
     const s = D ? D.settings : DEFAULT_SETTINGS;
@@ -124,7 +157,9 @@
     return h.length ? Math.round(h.reduce((a, b) => a + b.acc, 0) / h.length) : 0;
   }
   const bestWpm = () => D.history.filter((x) => x.type === 'test').reduce((m, x) => Math.max(m, x.wpm), 0);
-  const lessonsDone = () => Object.values(D.lessons).filter((l) => l.stars > 0).length;
+  const lessonsDone = () => Object.entries(D.lessons).filter(([k, l]) => !k.endsWith('@pro') && l.stars > 0).length;
+  const isPro = () => D.settings.mode === 'pro';
+  const lkey = (t, i, pro = isPro()) => `${t}-${i}${pro ? '@pro' : ''}`;
   const totalLessons = TRACKS.reduce((a, t) => a + t.lessons.length, 0);
   const totalStars = () => Object.values(D.lessons).reduce((a, l) => a + (l.stars || 0), 0);
   const practiceSec = () => Object.values(D.daily).reduce((a, b) => a + b, 0);
@@ -174,7 +209,7 @@
     app.innerHTML = `
     <div class="auth">
       <section class="auth-hero">
-        <div class="brand big"><img src="assets/icon.png" alt=""><span>X<b>Typing</b></span></div>
+        <div class="brand big"><img src="assets/icon.png" alt=""><span>Type<b>X</b></span></div>
         <h1>Type faster.<br><em>Learn it for free.</em></h1>
         <p>Step by step lessons, timed tests and fun games that turn slow hunting and pecking into confident touch typing. Works fully offline on this PC.</p>
         <div class="hero-keys" aria-hidden="true">${'ASDFJKL;'.split('').map((c, i) => `<span style="animation-delay:${i * 0.12}s">${c}</span>`).join('')}</div>
@@ -187,7 +222,7 @@
       </section>
       <section class="auth-panel">
         <div class="auth-card" id="auth-card"></div>
-        <div class="auth-foot">XTyping v${esc(info.version)} . Free for everyone</div>
+        <div class="auth-foot">TypeX v${esc(info.version)} . Free for everyone</div>
       </section>
     </div>`;
     wireDatix();
@@ -314,7 +349,7 @@
     app.innerHTML = `
     <div class="shell">
       <aside class="side">
-        <div class="brand"><img src="assets/icon.png" alt=""><span>X<b>Typing</b></span></div>
+        <div class="brand"><img src="assets/icon.png" alt=""><span>Type<b>X</b></span></div>
         <nav>${NAV.map(([id, name, ic]) => `<button data-nav="${id}">${icon(ic)}<span>${name}</span></button>`).join('')}</nav>
         <div class="side-foot">
           <div class="me"><span class="avatar" style="--av:${esc(user.color)}">${esc(initials(user.fullName))}</span><div><b class="me-name">${esc(user.fullName)}</b><small>@${esc(user.username)} . <span class="me-lv">Lv ${level(D.xp)}</span></small></div>
@@ -338,11 +373,18 @@
 
   function go(view, arg) {
     teardown();
+    if (!VIEWS[view]) view = 'dashboard';
     $$('[data-nav]').forEach((b) => b.classList.toggle('on', b.dataset.nav === view || (view === 'lesson' && b.dataset.nav === 'lessons') || (view === 'play' && b.dataset.nav === 'games')));
     const v = $('#view');
     v.scrollTop = 0;
     v.className = 'main view-' + view;
-    VIEWS[view](v, arg);
+    try {
+      const r = VIEWS[view](v, arg);
+      if (r && r.catch) r.catch(onAppError);
+    } catch (err) {
+      onAppError(err);
+      if (view !== 'dashboard') { go('dashboard'); return; }
+    }
     refreshMe();
   }
 
@@ -435,28 +477,37 @@
   VIEWS.lessons = (v, arg) => {
     const tab = (arg && arg.track) || D.lastTrack || 'beginner';
     v.innerHTML = `
-      <header class="page-head"><div><h1>Lessons</h1><p class="muted">Follow the path in order, or jump to any lesson. Aim for 3 stars.</p></div></header>
+      <header class="page-head"><div><h1>Lessons</h1><p class="muted">Follow the path in order, or jump to any lesson. Aim for 3 stars.</p></div>
+        <div class="mode-pick"><div class="seg" id="mode"><button data-m="beginner" class="${isPro() ? '' : 'on'}">${icon('book')} Beginner</button><button data-m="pro" class="${isPro() ? 'on' : ''}">${icon('bolt')} Pro</button></div><small class="muted" id="mode-note"></small></div></header>
       <div class="tabs">${TRACKS.map((t) => {
-        const done = t.lessons.filter((_, i) => (D.lessons[`${t.id}-${i}`] || {}).stars).length;
+        const done = t.lessons.filter((_, i) => (D.lessons[lkey(t.id, i)] || {}).stars).length;
         return `<button data-tab="${t.id}" class="${t.id === tab ? 'on' : ''}" style="--tc:${t.color}"><b>${t.name}</b><small>${done}/${t.lessons.length}</small></button>`;
       }).join('')}</div>
       <div id="tl"></div>`;
     const draw = (id) => {
       D.lastTrack = id;
       const t = TRACKS.find((x) => x.id === id);
-      const done = t.lessons.filter((_, i) => (D.lessons[`${t.id}-${i}`] || {}).stars).length;
+      const done = t.lessons.filter((_, i) => (D.lessons[lkey(t.id, i)] || {}).stars).length;
+      $('#mode-note', v).textContent = isPro() ? 'Pro: no key hints, mistakes stay, longer text, higher targets.' : 'Beginner: key hints and you fix mistakes as you go.';
+      v.classList.toggle('pro-mode', isPro());
+      $$('[data-tab] small', v).forEach((n, k) => { const tt = TRACKS[k]; n.textContent = `${tt.lessons.filter((_, i) => (D.lessons[lkey(tt.id, i)] || {}).stars).length}/${tt.lessons.length}`; });
       $('#tl', v).innerHTML = `
         <div class="track-head" style="--tc:${t.color}"><div><h2>${t.name}</h2><p class="muted">${t.desc}</p></div><div class="bar"><i style="width:${(done / t.lessons.length) * 100}%"></i></div></div>
         ${t.numpad && !LAYOUTS[D.settings.layout].numpad ? `<div class="note">${icon('kb')} Your keyboard layout is set without a number pad. These lessons still work with the number row, or switch layout in Settings.</div>` : ''}
         <div class="lesson-grid">${t.lessons.map((l, i) => {
-          const r = D.lessons[`${t.id}-${i}`] || {};
+          const r = D.lessons[lkey(t.id, i)] || {};
           const keys = l[1] ? [...l[1]].map((c) => `<kbd>${esc(c === ' ' ? 'space' : c.toUpperCase())}</kbd>`).join('') : `<span class="pill">${esc(l[2] === 'review' || l[2] === 'numreview' || l[2] === 'npreview' ? 'Review' : 'Practice')}</span>`;
-          return `<button class="lesson ${r.stars ? 'done' : ''}" data-i="${i}" style="--tc:${t.color}"><span class="num">${i + 1}</span><div class="l-keys">${keys}</div><b>${esc(l[0])}</b><div class="l-foot">${starRow(r.stars || 0)}${r.wpm ? `<small>${r.wpm} WPM</small>` : ''}</div></button>`;
+          return `<button class="lesson ${r.stars ? 'done' : ''}" data-i="${i}" style="--tc:${t.color}"><span class="num">${i + 1}</span><div class="l-keys">${keys}</div><b>${esc(l[0])}</b>${isPro() ? '<span class="pro-tag">PRO</span>' : ''}<div class="l-foot">${starRow(r.stars || 0)}${r.wpm ? `<small>${r.wpm} WPM</small>` : ''}</div></button>`;
         }).join('')}</div>`;
       $$('.lesson', v).forEach((b) => b.addEventListener('click', () => go('lesson', { track: id, index: +b.dataset.i })));
       $$('[data-tab]', v).forEach((b) => b.classList.toggle('on', b.dataset.tab === id));
     };
     $$('[data-tab]', v).forEach((b) => b.addEventListener('click', () => draw(b.dataset.tab)));
+    $$('#mode button', v).forEach((b) => b.addEventListener('click', () => {
+      D.settings.mode = b.dataset.m; save();
+      $$('#mode button', v).forEach((x) => x.classList.toggle('on', x === b));
+      draw(D.lastTrack || tab);
+    }));
     draw(tab);
   };
 
@@ -498,10 +549,13 @@
   }
 
   // ----- lesson player -----
-  VIEWS.lesson = (v, { track, index }) => {
+  VIEWS.lesson = (v, { track, index, pro }) => {
+    if (pro === undefined) pro = isPro();
     const L = buildLesson(track, index);
+    if (pro) { const more = buildLesson(track, index).screens; L.screens.push(more[more.length - 1]); }
     const t = TRACKS.find((x) => x.id === track);
-    const ui = typingArea(v, { title: `${index + 1}. ${L.title}`, sub: t.name, back: 'Lessons' });
+    const ui = typingArea(v, { title: `${index + 1}. ${L.title}`, sub: `${t.name} . ${pro ? 'Pro mode' : 'Beginner mode'}`, back: 'Lessons' });
+    if (pro) { v.classList.add('pro-mode'); const hh = $('.hands-holder', v); if (hh) hh.classList.add('hide'); $('#hint', v).innerHTML = 'Pro mode: no key hints and no Backspace. Press <kbd>Esc</kbd> to restart.'; }
     $('[data-back]', v).addEventListener('click', () => go('lessons', { track }));
     let step = 0; let session = null; const results = [];
     const steps = $('#steps', v);
@@ -512,12 +566,12 @@
       if (session) session.destroy();
       $('#hint', v).classList.remove('gone');
       session = new window.XTEngine.Session({
-        el: ui.text, text: L.screens[step], stopOnError: D.settings.stopOnError, keyboard: ui.kb, hands: ui.hands, preferNumpad: L.numpad,
+        el: ui.text, text: L.screens[step], stopOnError: pro ? false : D.settings.stopOnError, noBackspace: pro, keyboard: pro ? null : ui.kb, hands: pro ? null : ui.hands, preferNumpad: L.numpad,
         onStart: () => $('#hint', v).classList.add('gone'),
-        onUpdate: (st) => { updateLive(v, st); fingerTip(v, ui.kb, L.screens[step][session.pos], L.numpad); },
+        onUpdate: (st) => { updateLive(v, st); if (!pro) fingerTip(v, ui.kb, L.screens[step][session.pos], L.numpad); },
         onDone: (st) => { results.push(st); step++; if (step < L.screens.length) { Sound.success(1); setTimeout(startStep, 350); } else finish(); },
       });
-      fingerTip(v, ui.kb, L.screens[step][0], L.numpad);
+      if (!pro) fingerTip(v, ui.kb, L.screens[step][0], L.numpad);
     }
 
     const escH = (e) => { if (e.key === 'Escape' && !$('#modal-root').innerHTML) { e.preventDefault(); results.length = 0; step = 0; startStep(); updateLive(v, { wpm: 0, acc: 100, time: 0 }); } };
@@ -532,35 +586,41 @@
       const wpm = Math.round((chars / 5) / (Math.max(time, 1) / 60));
       const acc = typed ? Math.round(((typed - errors) / typed) * 100) : 100;
       const target = D.settings.targetWpm;
-      const stars = acc >= 96 && wpm >= target * 0.8 ? 3 : acc >= 90 ? 2 : acc >= 80 ? 1 : 0;
-      const id = `${track}-${index}`;
+      const stars = pro
+        ? (acc >= 98 && wpm >= target * 1.25 ? 3 : acc >= 95 ? 2 : acc >= 90 ? 1 : 0)
+        : (acc >= 96 && wpm >= target * 0.8 ? 3 : acc >= 90 ? 2 : acc >= 80 ? 1 : 0);
+      const id = lkey(track, index, pro);
+      const xp = Math.round((stars * 15 + wpm / 2 + 5) * (pro ? 1.5 : 1));
       const prev = D.lessons[id] || {};
       D.lessons[id] = { stars: Math.max(prev.stars || 0, stars), wpm: Math.max(prev.wpm || 0, wpm), acc: Math.max(prev.acc || 0, acc), plays: (prev.plays || 0) + 1 };
       results.forEach((r) => mergeKeys(r.keyStats));
       addPractice(time);
-      record({ type: 'lesson', title: `${t.name}: ${L.title}`, wpm, acc, dur: Math.round(time) });
-      gainXp(stars * 15 + wpm / 2 + 5);
+      record({ type: 'lesson', title: `${t.name}: ${L.title}${pro ? ' (Pro)' : ''}`, wpm, acc, dur: Math.round(time) });
+      gainXp(xp);
       checkBadges();
       save();
       Sound.success(stars || 1);
       const hasNext = index + 1 < t.lessons.length;
       modal(`
         <div class="result center">
-          ${starRow(stars, 'xl')}
+          ${pro ? '<div class="tag pro">Pro mode</div><br>' : ''}${starRow(stars, 'xl')}
           <h2>${stars === 3 ? 'Excellent!' : stars === 2 ? 'Great job!' : stars === 1 ? 'Good effort!' : 'Keep practising'}</h2>
-          <p class="muted">${stars < 3 ? (acc < 96 ? 'Slow down a little and aim for 96% accuracy to earn 3 stars.' : `Reach about ${Math.round(target * 0.8)} WPM with high accuracy for 3 stars.`) : 'You mastered this lesson.'}</p>
-          <div class="res-stats"><div><b>${wpm}</b><span>WPM</span></div><div><b>${acc}%</b><span>Accuracy</span></div><div><b>${fmtTime(time)}</b><span>Time</span></div><div><b>+${Math.round(stars * 15 + wpm / 2 + 5)}</b><span>XP</span></div></div>
+          <p class="muted">${stars < 3 ? (acc < (pro ? 98 : 96) ? `Slow down a little and aim for ${pro ? 98 : 96}% accuracy to earn 3 stars.` : `Reach about ${Math.round(target * (pro ? 1.25 : 0.8))} WPM with high accuracy for 3 stars.`) : pro ? 'Pro level mastered. Outstanding!' : 'You mastered this lesson. Ready for Pro mode?'}</p>
+          <div class="res-stats"><div><b>${wpm}</b><span>WPM</span></div><div><b>${acc}%</b><span>Accuracy</span></div><div><b>${fmtTime(time)}</b><span>Time</span></div><div><b>+${xp}</b><span>XP</span></div></div>
           <div class="row center">
             <button class="btn ghost" data-retry>${icon('redo')} Try again</button>
+            ${!pro && stars === 3 ? `<button class="btn ghost" data-pro>${icon('bolt')} Try Pro</button>` : ''}
             ${hasNext ? `<button class="btn primary" data-next>Next lesson ${icon('play')}</button>` : `<button class="btn primary" data-list>Back to lessons</button>`}
           </div>
-          <small class="muted">Press Enter for ${hasNext ? 'the next lesson' : 'lessons'}</small>
+          <small class="muted">Press Enter for ${hasNext ? 'the next lesson' : 'lessons'}, Esc to close</small>
         </div>`, {
         dismiss: false,
+        onX: () => go('lessons', { track }),
         onMount: (m, close) => {
-          const next = () => { close(); go('lesson', { track, index: index + 1 }); };
-          const retry = () => { close(); go('lesson', { track, index }); };
+          const next = () => { close(); go('lesson', { track, index: index + 1, pro }); };
+          const retry = () => { close(); go('lesson', { track, index, pro }); };
           $('[data-retry]', m).addEventListener('click', retry);
+          const tp = $('[data-pro]', m); if (tp) tp.addEventListener('click', () => { close(); go('lesson', { track, index, pro: true }); });
           if (hasNext) $('[data-next]', m).addEventListener('click', next); else $('[data-list]', m).addEventListener('click', () => { close(); go('lessons', { track }); });
           const kh = (e) => { if (!document.body.contains(m)) { window.removeEventListener('keydown', kh, true); return; } if (e.key === 'Enter') { e.preventDefault(); window.removeEventListener('keydown', kh, true); hasNext ? next() : (close(), go('lessons', { track })); } };
           setTimeout(() => window.addEventListener('keydown', kh, true), 400);
@@ -569,7 +629,7 @@
     }
 
     // Intro for lessons with new keys
-    if (L.keys && !(D.lessons[`${track}-${index}`] || {}).stars) {
+    if (!pro && L.keys && !(D.lessons[`${track}-${index}`] || {}).stars) {
       const infos = [...L.keys].map((c) => ({ c, info: ui.kb.highlight(c, L.numpad) }));
       ui.kb.clear();
       modal(`
@@ -660,6 +720,7 @@
           <div class="row center"><button class="btn ghost" data-opts>Change options</button><button class="btn primary" data-again>${icon('redo')} Test again</button></div>
         </div>`, {
         dismiss: false,
+        onX: () => setup(),
         onMount: (m, close) => {
           $('[data-again]', m).addEventListener('click', () => { close(); run(); });
           $('[data-opts]', m).addEventListener('click', () => { close(); setup(); });
@@ -707,7 +768,7 @@
             ${id === 'sprint' ? `<div class="big-wpm"><b>${['', '1st', '2nd', '3rd', '4th'][r.place]}</b><span>place . ${r.wpm} WPM</span></div>` : `<div class="big-wpm"><b>${r.score}</b><span>points</span></div>`}
             <div class="res-stats"><div><b>${r.acc}%</b><span>Accuracy</span></div><div><b>${id === 'sprint' ? r.score : r.level}</b><span>${id === 'sprint' ? 'Points' : 'Level reached'}</span></div><div><b>${rec.best}</b><span>High score</span></div></div>
             <div class="row center"><button class="btn ghost" data-exit>All games</button><button class="btn primary" data-again>${icon('redo')} Play again</button></div>
-          </div>`, { dismiss: false, onMount: (m, close) => { $('[data-again]', m).addEventListener('click', () => { close(); begin(); }); $('[data-exit]', m).addEventListener('click', () => { close(); go('games'); }); } });
+          </div>`, { dismiss: false, onX: () => go('games'), onMount: (m, close) => { $('[data-again]', m).addEventListener('click', () => { close(); begin(); }); $('[data-exit]', m).addEventListener('click', () => { close(); go('games'); }); } });
       }, { letters, avgWpm: avgWpm() });
       cleanup = stop;
     };
@@ -791,13 +852,13 @@
           <form id="pw"><h4>Change password</h4><div class="row2"><label>Current<input type="password" name="o" required></label><label>New<input type="password" name="p" required></label></div><button class="btn ghost sm">Change password</button></form>
         </section>
         <section class="card"><h3>${icon('lock')} Data on this PC</h3>
-          <p class="muted">XTyping has no cloud. Your progress stays on this computer until its data is erased. Save a backup file to move progress to another PC.</p>
+          <p class="muted">TypeX has no cloud. Your progress stays on this computer until its data is erased. Save a backup file to move progress to another PC.</p>
           <div class="row"><button class="btn ghost sm" id="exp">Save backup file</button><button class="btn ghost sm" id="imp">Load backup file</button></div>
           <small class="muted path">Stored in: ${esc(info.dataDir)}</small>
           <hr><h4 class="danger-t">Delete profile</h4><p class="muted">Removes this profile and all its progress from this PC.</p><button class="btn danger sm" id="del">Delete my profile</button>
         </section>
       </div>
-      <section class="card about"><img src="assets/icon.png" alt=""><div><b>XTyping ${esc(info.version)}</b><p class="muted">Free typing tutor for Windows. No ads, no accounts online, no tracking.</p></div><button class="credit" data-datix>Developed by <b>Datix AI</b> . datixai.com</button></section>`;
+      <section class="card about"><img src="assets/icon.png" alt=""><div><b>TypeX ${esc(info.version)}</b><p class="muted">Free typing tutor for Windows. No ads, no accounts online, no tracking.</p></div><button class="credit" data-datix>Developed by <b>Datix AI</b> . datixai.com</button></section>`;
     wireDatix(v);
     layoutPicker($('#lp', v), () => toast('Keyboard layout updated', 'ok'));
     $('#snd', v).addEventListener('change', (e) => { s.sound = e.target.value; applySettings(); save(); Sound.key(false); });
