@@ -2,3 +2,5 @@ node_modules/
 dist/
 *.log
 dev/
+marketing/reel/work/
+marketing/reel/*.mp4

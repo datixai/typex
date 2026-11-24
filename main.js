@@ -5,6 +5,8 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 
+// Developer only: keep test and demo data away from the real profiles folder.
+if (!app.isPackaged && process.env.XT_USERDATA) app.setPath('userData', process.env.XT_USERDATA);
 const DATA_DIR = path.join(app.getPath('userData'), 'profiles');
 const DB_FILE = path.join(DATA_DIR, 'users.json');
 const USERNAME_RE = /^[a-z][a-z0-9._]{2,23}$/;
@@ -16,7 +18,7 @@ const failed = {}; // username -> { count, until }
 // The app was called XTyping in version 1.0.0. Bring those profiles across once.
 function migrateOldProfiles() {
   try {
-    if (fs.existsSync(DB_FILE)) return;
+    if (fs.existsSync(DB_FILE) || process.env.XT_USERDATA) return;
     const old = path.join(app.getPath('appData'), 'XTyping', 'profiles', 'users.json');
     if (!fs.existsSync(old)) return;
     fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -124,6 +126,7 @@ function createWindow() {
       nodeIntegration: false,
       sandbox: true,
       spellcheck: false,
+      backgroundThrottling: false,
     },
   });
   Menu.setApplicationMenu(null);
@@ -135,6 +138,15 @@ function createWindow() {
     setTimeout(async () => {
       if (process.env.XT_EVAL) {
         try { console.log('[eval]', await win.webContents.executeJavaScript(fs.readFileSync(process.env.XT_EVAL, 'utf8'))); } catch (e) { console.log('[eval error]', e.message); }
+      }
+      // XT_STEPS=<steps.js> exporting [{ js, shot, wait }]: run each step and save numbered screenshots.
+      if (process.env.XT_STEPS) {
+        const steps = require(process.env.XT_STEPS);
+        for (const s of steps) {
+          try { if (s.js) await win.webContents.executeJavaScript(s.js); } catch (e) { console.log('[step error]', s.shot, e.message); }
+          await new Promise((r) => setTimeout(r, s.wait || 120));
+          if (s.shot) fs.writeFileSync(s.shot, (await win.webContents.capturePage()).toPNG());
+        }
       }
       const img = await win.webContents.capturePage();
       fs.writeFileSync(process.env.XT_SHOT, img.toPNG());
