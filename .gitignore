@@ -4,3 +4,7 @@ dist/
 dev/
 marketing/reel/work/
 marketing/reel/*.mp4
+marketing/video/clips/
+marketing/video/work/
+marketing/video/*.mp4
+marketing/video/*.wav
